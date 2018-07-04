@@ -6,18 +6,21 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.bclz.filterFile.condition.FilterCondition;
+import com.bclz.filterFile.condition.FindCondition;
 
 
 
 public class FilterFiles {
 	
-	
+	private FindCondition condition=new SimpleFilter();
 	private volatile Vector<String> list = new Vector<String>();
 	private AtomicInteger fileCount=new AtomicInteger(0);
 	private ExecutorService threadPool=Executors.newCachedThreadPool();
@@ -27,7 +30,7 @@ public class FilterFiles {
 	 * @param 文件路径
 	 * @return 返回满足条件的文件名集合
 	 */
-	public  Vector<String> FilterFileByDir(String dir,String filterKey,int threadNum)
+	public  Vector<String> FilterFileByDir(String dir,Map<String, List<String>> filterKey,int threadNum)
 	{
 			
 		try {
@@ -42,7 +45,7 @@ public class FilterFiles {
 			if(listFiles.length<200) {
 				readFile(0,listFiles.length,listFiles,filterKey,list);
 				System.out.println("All Thread Exe End...");
-				System.out.println("Filter By"+filterKey+" File Num:"+fileCount);
+				System.out.println("Filter  File Num:"+fileCount);
 				System.out.println("Saved directory NoMatched/...");
 			}else {
 				//多线程读取
@@ -51,7 +54,7 @@ public class FilterFiles {
 					
 					if(threadPool.isTerminated()) {
 						System.out.println("All Thread Exe End...");
-						System.out.println("Filter By"+filterKey+" File Num:"+fileCount);
+						System.out.println("Filter  File Num:"+fileCount);
 						System.out.println("Saved directory NoMatched/...");
 						break;
 					}
@@ -67,7 +70,7 @@ public class FilterFiles {
 		
 	}
 	
-	private void mutilpateThreadRead(ExecutorService threadPool,int threadNum,File[] files,String filterKey,Vector<String> list ) throws Exception {
+	private void mutilpateThreadRead(ExecutorService threadPool,int threadNum,File[] files,Map<String, List<String>> filterKey,Vector<String> list ) throws Exception {
 		int len=files.length;
 		if(threadNum==0) {
 			readFile(0,len,files,filterKey,list);
@@ -110,7 +113,7 @@ public class FilterFiles {
 	 * @param list
 	 * @throws Exception
 	 */
-	private void readFile(int begin,int end,File[] files,String filterKey,Vector<String> list ) throws Exception {
+	private void readFile(int begin,int end,File[] files,Map<String, List<String>> filterKey,Vector<String> list ) throws Exception {
 		int isException=0;
 		for (int i = begin; i < end; i++) {
 			
@@ -131,7 +134,7 @@ public class FilterFiles {
 			}
 			//重置指针位置，以供下一次使用
 			bufread.reset();
-			if (sb.indexOf(filterKey)<=0) {
+			if (condition.processCondition(filterKey,sb.toString())) {
 				fileCount.incrementAndGet();
 				buf=new BufferedOutputStream(new FileOutputStream("NoMatched\\"+file.getName()));
 				data=new byte[1024];
