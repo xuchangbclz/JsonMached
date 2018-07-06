@@ -28,21 +28,31 @@ public class FilterApp {
 	
 	
 	public static void main(String[] args) {
-//		args=new String[] {"C:\\Users\\xuchang\\Desktop\\123","02013311"};
 		try {
 			
 			String pathAndNum="";
 			String wayAndData="";
-			System.out.println("Please import target path and threadNum by & (example:C://Users//xuchang//Desktop//123&3):");
+			String regex="";
+			int isContent=1;
+			System.out.println("Please import matches File regex and isContent by 1|0 (example:((.*)_(.*)\\.json)&0)");
 			Scanner sc=new Scanner(System.in);
-			if(sc.hasNext()) {
+			if(true) {
+				String fileParams=sc.nextLine();
+				//				String fileParams="((.*)_(.*))\\.json&0";
+				regex=fileParams.split("&")[0];
+				isContent=Integer.parseInt(fileParams.split("&")[1]);
+			}
+			System.out.println("Please import target path and threadNum by & (example:C://Users//xuchang//Desktop//123&3):");
+			if(true) {
+				//				pathAndNum="C://Users//xuchang//Desktop//123&3";
 				pathAndNum=sc.nextLine();
 			}
 			
 			System.out.println("Please import filter way and data by > and & ; (example:!=>2&3&2;=>2&3&2&1):");
-			if(sc.hasNext()) {
+			if(true) {
 				Map<String, List<String>> con=new HashMap<>();
 				wayAndData=sc.nextLine();
+				//				wayAndData="=>05";
 				String[] conList=wayAndData.split(";");
 				for(String conA :conList) {
 					List<String> conValue=new ArrayList<>();
@@ -55,7 +65,7 @@ public class FilterApp {
 				String[] path=pathAndNum.split("&");
 				System.out.println(path[0]+"   "+path[1]);
 				System.out.println(con.toString());
-				(new FilterFiles()).FilterFileByDir(path[0], con,Integer.parseInt(path[1]));
+				(new FilterFiles(con,regex,isContent)).FilterFileByDir(path[0], Integer.parseInt(path[1]));
 			}
 			
 		}catch(Exception e){

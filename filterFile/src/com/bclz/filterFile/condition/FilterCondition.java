@@ -11,6 +11,7 @@ package com.bclz.filterFile.condition;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.util.regex.Pattern;
 
 /**  
 * Title: FilterCondition
@@ -20,11 +21,18 @@ import java.io.FileFilter;
 */
 public class FilterCondition implements FileFilter {
 	
+	private String regex;
+	
+	public FilterCondition(String regex){
+		
+		this.regex=regex;
+	}
+	
 	@Override
 	public boolean accept(File file) {
 		// TODO Auto-generated method stub
 		String fileName = file.getName();
-		if(fileName.indexOf(".json")>0 && fileName.indexOf("___")>0 )
+		if(Pattern.matches(regex, fileName) )
 		{
 			return true;
 		}

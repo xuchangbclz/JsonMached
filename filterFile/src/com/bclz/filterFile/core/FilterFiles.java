@@ -8,10 +8,11 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.bclz.filterFile.condition.FilterCondition;
 import com.bclz.filterFile.condition.FindCondition;
@@ -21,21 +22,32 @@ import com.bclz.filterFile.condition.FindCondition;
 public class FilterFiles {
 	
 	private FindCondition condition=new SimpleFilter();
-	private volatile Vector<String> list = new Vector<String>();
 	private AtomicInteger fileCount=new AtomicInteger(0);
 	private ExecutorService threadPool=Executors.newCachedThreadPool();
+	private Map<String, List<String>> filterKey ;
+	private String regex;
+	private int isContent;
+	
+	
+	public FilterFiles(Map<String, List<String>> filterKey,String regex,int ispng ) {
+		this.filterKey=filterKey;
+		this.regex=regex;
+		this.isContent=ispng;
+	}
+	
+	
 	
 	/**
 	 * 输入文件路径，筛选合适的文件
 	 * @param 文件路径
 	 * @return 返回满足条件的文件名集合
 	 */
-	public  Vector<String> FilterFileByDir(String dir,Map<String, List<String>> filterKey,int threadNum)
+	public  void FilterFileByDir(String dir,int threadNum)
 	{
 			
 		try {
 			File mydir = new File(dir);
-			File[] listFiles = mydir.listFiles(new FilterCondition());
+			File[] listFiles = mydir.listFiles(new FilterCondition(regex));
 			File fdir=new File("NoMatched");
 			if(!fdir.exists()) {
 				fdir.mkdir();
@@ -43,13 +55,13 @@ public class FilterFiles {
 				deleteAll("NoMatched");
 			}
 			if(listFiles.length<200) {
-				readFile(0,listFiles.length,listFiles,filterKey,list);
+				readFile(0,listFiles.length,listFiles);
 				System.out.println("All Thread Exe End...");
 				System.out.println("Filter  File Num:"+fileCount);
 				System.out.println("Saved directory NoMatched/...");
 			}else {
 				//多线程读取
-				mutilpateThreadRead(threadPool,threadNum,listFiles,filterKey,list);
+				mutilpateThreadRead(threadPool,threadNum,listFiles);
 				while(true) {
 					
 					if(threadPool.isTerminated()) {
@@ -65,15 +77,15 @@ public class FilterFiles {
 		}catch(Exception e){
 			System.out.println("文件读取异常:"+e);
 		}
-		return list;
+		
 		
 		
 	}
 	
-	private void mutilpateThreadRead(ExecutorService threadPool,int threadNum,File[] files,Map<String, List<String>> filterKey,Vector<String> list ) throws Exception {
+	private void mutilpateThreadRead(ExecutorService threadPool,int threadNum,File[] files) throws Exception {
 		int len=files.length;
 		if(threadNum==0) {
-			readFile(0,len,files,filterKey,list);
+			readFile(0,len,files);
 		}else {
 			int begin=0;
 			int end=0;
@@ -85,7 +97,7 @@ public class FilterFiles {
 				final int b=end;
 				threadPool.submit(()->{
 					try {
-						readFile(a,b,files,filterKey,list);
+						readFile(a,b,files);
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
 						System.out.println("操作异常:"+e);
@@ -113,7 +125,7 @@ public class FilterFiles {
 	 * @param list
 	 * @throws Exception
 	 */
-	private void readFile(int begin,int end,File[] files,Map<String, List<String>> filterKey,Vector<String> list ) throws Exception {
+	private void readFile(int begin,int end,File[] files ) throws Exception {
 		int isException=0;
 		for (int i = begin; i < end; i++) {
 			
@@ -142,10 +154,26 @@ public class FilterFiles {
 					buf.write(data, 0, count);
 				}
 				buf.close();
-				list.add(file.getName());
 				String path=file.getPath();
-				String jsonName=path.split("___")[0]+".json";
-				String jpgName=path.substring(0, path.lastIndexOf("."))+".png";
+				String first="";
+				String second="";
+				Pattern p=Pattern.compile(regex);
+				Matcher m = p.matcher(path);
+				if(m.find()) {
+					first=m.group(1);
+					second=m.group(2);
+				}else {
+					System.out.println("程序奔溃了");
+					continue;
+				}
+				String jpgName=second;
+				
+				if(isContent==1) {
+					jpgName=first+".png";
+				}else {
+					jpgName+=".png";
+				}
+				String jsonName=second+".json";
 				try {
 					isException=fileCopy(jsonName);
 					if(isException==1) {
@@ -213,6 +241,9 @@ public class FilterFiles {
 	public int fileCopy(String path) throws Exception {
 		int isException=0;
 		File file=new File(path);
+		if(path.equals("000db751-7c4f-4962-a1e6-aa741ef8e834.json")) {
+			int aa=0;
+		}
 		if(file.exists()) {
 			BufferedInputStream bufinput=new BufferedInputStream(new FileInputStream(file));
 			OutputStream out=new FileOutputStream("NoMatched\\"+file.getName());
